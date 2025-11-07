@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <title>CRUD de Productos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e8ffe8;
+
+            /* Fondo con imagen + degradado animado */
+            background:
+                linear-gradient(120deg, #358506, #a9d40e),
+                url("fondo-hojas-ginkgo.png");
+            background-size: 200% 200%, cover;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            background-blend-mode: overlay;
+
+            animation: fondoVerde 8s ease-in-out infinite;
+        }
+
+        @keyframes fondoVerde {
+            0% {
+                background-position: 0% 50%, center;
+            }
+
+            50% {
+                background-position: 100% 50%, center;
+            }
+
+            100% {
+                background-position: 0% 50%, center;
+            }
+        }
+
+
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #b2ffb2;
+        }
+
+        .form-container {
+            background: rgba(0, 40, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 450px;
+            margin: 0 auto 30px;
+            box-shadow: 0 0 10px rgba(0, 50, 0, 0.4);
+        }
+
+        .form-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #4caf50;
+            background: rgba(255, 255, 255, 0.05);
+            color: #d9ffd9;
+        }
+
+        .form-container input:focus {
+            outline: none;
+            border-color: #66ff66;
+        }
+
+        .btn-crear,
+        .btn-eliminar {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            color: #fff;
+            margin-right: 5px;
+        }
+
+        .btn-crear {
+            background: #2e8b57;
+        }
+
+        .btn-crear:hover {
+            background: #3cb371;
+        }
+
+        .btn-eliminar {
+            background: #4b6043;
+        }
+
+        .btn-eliminar:hover {
+            background: #6b8e23;
+        }
+
+        #busqueda {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            border: 1px solid #4caf50;
+            background: rgba(255, 255, 255, 0.05);
+            color: #d9ffd9;
+        }
+
+        #productos-lista {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 40, 0, 0.6);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #productos-lista th,
+        #productos-lista td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #productos-lista th {
+            background: #1e4620;
+            color: #b2ffb2;
+            text-transform: uppercase;
+        }
+
+        #productos-lista tr:hover {
+            background: rgba(100, 255, 100, 0.1);
+        }
+    </style>
+</head>
+
+
+<h1>CRUD de Productos.</h1>
+
+<div class="form-container">
+    <h2>Crear Nuevo Producto</h2>
+    <input type="text" id="nombre" placeholder="Nombre" required>
+    <input type="text" id="descripcion" placeholder="Descripción">
+    <input type="number" id="precio" placeholder="Precio" required>
+    <input type="text" id="categoria" placeholder="Categoría">
+    <button class="btn-crear" onclick="crearProducto()">Crear Producto</button>
+    <p id="mensaje-creacion"></p>
+</div>
+
+<h2>Lista de Productos</h2>
+<input type="text" id="busqueda" placeholder="Buscar por ID, nombre, descripción o categoría">
+<button class="btn-crear" onclick="obtenerProductos()">Actualizar / Cargar Lista</button>
+
+<table id="productos-lista">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Descripcion</th>
+            <th>Categoría</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody id="productos-cuerpo"></tbody>
+</table>
+
+<script>
+    const API_URL = 'http://127.0.0.1:8000/productos/';
+
+    async function obtenerProductos() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+            const productos = await response.json();
+            const cuerpoTabla = document.getElementById('productos-cuerpo');
+            cuerpoTabla.innerHTML = '';
+            productos.forEach(producto => {
+                const fila = cuerpoTabla.insertRow();
+                fila.insertCell().textContent = producto.id;
+                fila.insertCell().textContent = producto.nombre;
+                fila.insertCell().textContent = producto.precio.toFixed(2);
+                fila.insertCell().textContent = producto.descripcion;
+                fila.insertCell().textContent = producto.categoria || 'Sin Cat.';
+                const celdaAcciones = fila.insertCell();
+                const btnEliminar = document.createElement('button');
+                btnEliminar.textContent = 'Eliminar';
+                btnEliminar.className = 'btn-eliminar';
+                btnEliminar.onclick = () => eliminarProducto(producto.id);
+                celdaAcciones.appendChild(btnEliminar);
+            });
+        } catch (error) {
+            console.error('Error al obtener productos:', error);
+            document.getElementById('productos-cuerpo').innerHTML =
+                '<tr><td colspan="5">Error al cargar. Verifique que la API esté encendida.</td></tr>';
+        }
+    }
+
+    async function crearProducto() {
+        const nombre = document.getElementById('nombre').value;
+        const precio = parseFloat(document.getElementById('precio').value);
+        const descripcion = document.getElementById('descripcion').value;
+        const categoria = document.getElementById('categoria').value;
+        const mensajeDiv = document.getElementById('mensaje-creacion');
+        if (!nombre || isNaN(precio)) {
+            mensajeDiv.textContent = 'Nombre y Precio son obligatorios.';
+            return;
+        }
+        const nuevoProducto = { nombre, precio, descripcion, categoria: categoria || null };
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nuevoProducto)
+            });
+            if (response.status === 201) {
+                mensajeDiv.textContent = `Producto '${nombre}' creado con éxito.`;
+                document.getElementById('nombre').value = '';
+                document.getElementById('precio').value = '';
+                document.getElementById('descripcion').value = '';
+                document.getElementById('categoria').value = '';
+                obtenerProductos();
+            } else {
+                const errorData = await response.json();
+                mensajeDiv.textContent = `Error (${response.status}): ${errorData.detail || 'Fallo de API.'}`;
+            }
+        } catch (error) {
+            console.error('Error de red al crear producto:', error);
+            mensajeDiv.textContent = 'Error de conexión con el servidor.';
+        }
+    }
+
+    async function eliminarProducto(id) {
+        try {
+            const response = await fetch(`${API_URL}${id}`, { method: 'DELETE' });
+            if (response.status === 204) obtenerProductos();
+            else console.error('Error al eliminar:', response.status);
+        } catch (error) {
+            console.error('Error de red al eliminar producto:', error);
+        }
+    }
+
+    document.getElementById('busqueda').addEventListener('input', function () {
+        const filtro = this.value.toLowerCase();
+        const filas = document.querySelectorAll('#productos-cuerpo tr');
+        filas.forEach(fila => {
+            const celdas = fila.querySelectorAll('td');
+            const texto = celdas[0].textContent.toLowerCase() +
+                celdas[1].textContent.toLowerCase() +
+                celdas[2].textContent.toLowerCase() +
+                celdas[3].textContent.toLowerCase();
+            fila.style.display = texto.includes(filtro) ? '' : 'none';
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', obtenerProductos);
+</script>
+
+</body>
+
+</html>
